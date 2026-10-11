@@ -1,6 +1,6 @@
 # 최유렬 | Backend Developer Portfolio
 
-Java와 Spring으로 서비스 API와 데이터 수집기를 개발했습니다. 토큰 갱신 요청이 겹쳐 발생한 오류를 수정했고, 배포 환경 차이로 생긴 빌드 실패와 파일 저장 성능 저하를 재현하며 원인을 찾아 개선했습니다.
+Java와 Spring으로 서비스 API와 데이터 수집기를 개발했습니다. 토큰 갱신 요청이 겹쳐 발생한 오류를 수정하고, 배포 환경 차이로 생긴 빌드 실패를 재현해 CI를 보완했습니다. 실시간 게임에서는 API와 게임 서버의 역할을 나누고 Redis로 서버 상태와 방 배정을 관리했습니다.
 
 [GitHub](https://github.com/yuyeol3) / [개발 블로그](https://yuyeol3.github.io/)
 
@@ -10,7 +10,7 @@ Java와 Spring으로 서비스 API와 데이터 수집기를 개발했습니다.
 | --- | --- | --- |
 | Y-Fin | Refresh Token 동시성 수정, 금융 데이터 수집과 정규화, LLM 호출 실험 | 토큰 갱신 10개 요청에서 성공 1건, 401 응답 9건. 동일한 금융상품 97건의 배치 시간 38~48% 단축 |
 | 카카오테크캠퍼스 | PR 검증과 ECR, SSM 배포 경로 구축, Docker 빌드 실패 대응 | 배포에서만 발견되던 오류를 PR 단계에서 재현하고, 수정 후 3개 구성요소 빌드 통과 |
-| mc-distributed | 스냅샷 기록과 재생으로 병목 분석, 변경 파일만 stage하도록 개선 | 조정용 재생의 커밋 시간 0.87→9.7초 증가를 0.49~1.2초 범위로 완화. 별도 검증용 재생 0.37~0.91초 |
+| Yacht Online | API와 게임 서버 역할 분리, Redis 기반 서버 선택, EC2 배포 | Docker Compose 통합 실행 후 게임 서버 2대를 AWS에 배포. 10초 heartbeat와 30초 TTL로 서버 상태 관리 |
 
 ## 지원 직무와 연결되는 역량
 
@@ -18,16 +18,16 @@ Java와 Spring으로 서비스 API와 데이터 수집기를 개발했습니다.
 | --- | --- |
 | Java, Spring Boot, REST API, 인증과 보안 | Y-Fin의 OAuth2, JWT, Spring Security 인증, 사용자와 상품 API |
 | 관계형 DB와 데이터 처리 | PostgreSQL과 JPA를 이용한 토큰 상태 변경, Spring Batch 외부 API 수집과 정규화 |
+| Redis 활용 | Yacht의 서버별 방 개수 관리, heartbeat와 TTL을 이용한 서버 선택, 방과 서버의 연결 정보 저장 |
 | AWS, 컨테이너, CI/CD | 카테캠의 EC2, Docker Compose, GitHub Actions, ECR, SSM 배포 |
-| 안정성과 성능 개선 | 토큰 중복 갱신 방지, 배포 환경 차이 재현, 파일 커밋 비용 분석 |
+| 안정성과 성능 개선 | 토큰 중복 갱신 방지, LLM 배치 지연 분석, 배포 환경 차이 재현, heartbeat가 끊긴 서버를 선택 후보에서 제외 |
 | Git 협업과 배포 관리, 테스트 | 팀 PR에 테스트와 이미지 빌드 적용, 커밋 SHA 기반 이미지 추적, 수정 전후 실행 기록 |
 
 ## 목차
 
 1. [Y-Fin](#1-y-fin): 토큰 갱신 동시성 / 외부 금융 데이터 처리
 2. [카카오테크캠퍼스 팀 프로젝트](#2-카카오테크캠퍼스-팀-프로젝트): 배포 실패 재현과 CI 보완
-3. [mc-distributed](#3-mc-distributed): 스냅샷 커밋 병목 분석
-4. [추가 기술 경험](#추가-기술-경험)
+3. [Yacht Online](#3-yacht-online): 서버 역할 분리 / Redis 기반 서버 선택 / EC2 배포
 
 ---
 
@@ -128,50 +128,46 @@ Compose 기동 대기와 공개 HTTPS 응답 확인을 배포 과정에 넣었�
 
 ---
 
-## 3. mc-distributed
+## 3. Yacht Online
 
-**상시 게임 서버 없이 참가자의 PC가 호스트를 맡고, Git 저장소로 하나의 Minecraft 월드를 공유하는 프로그램**
+**최대 4명이 한 방에서 함께 플레이하는 실시간 주사위 게임**
 
 | 항목 | 내용 |
 | --- | --- |
-| 담당한 작업 | 스냅샷 커밋 비용의 원인 분석, 변경 파일만 stage하는 개선 및 재생 실험 |
-| 주요 기술 | Java, JGit, Paper, Git 기반 월드 버전 관리 |
-| 검증 환경 | 로컬 Paper와 테스트 봇으로 세션 기록, Paper 없이 스냅샷 재생. 실제 원격 친구 환경은 미검증 |
-| 코드 / 구조 | [저장소](https://github.com/yuyeol3/mc-distributed) / [아키텍처](https://github.com/yuyeol3/mc-distributed/blob/main/docs/ARCHITECTURE.md) |
+| 기간 / 인원 | 2026.02 ~ 2026.06 / 3인 팀, 클라우드컴퓨팅 과제 |
+| 본인 역할 | 백엔드 구조 개선, API와 게임 서버 역할 분리, Redis 연동, Docker Compose 통합 실행, EC2 배포 및 RDS와 ALB 연동 |
+| 주요 기술 | Java, Spring Boot, WebSocket(STOMP), Redis, Docker Compose, AWS EC2 |
+| 구현 범위 | 게임 서버 2대, 방당 최대 4명, 3분 턴 제한 |
+| 코드 | [통합 저장소](https://github.com/yuyeol3/yacht-online) / [백엔드 저장소](https://github.com/yuyeol3/yacht-backend/tree/feat/seperate-game-api) |
 
-### 월드가 커질수록 스냅샷 커밋이 느려지는 현상
+### API와 게임 서버의 역할을 나누고 서버를 선택하는 구조
 
-월드 스냅샷을 커밋하는 시간이 회차마다 늘어났습니다. 조정용 재생에서 실제로 변경된 양은 비슷했지만 커밋 시간이 0.87초에서 9.7초로 증가했습니다. 커밋은 월드의 디스크 저장을 멈춘 구간에서 수행하므로 이 시간을 줄일 필요가 있었습니다.
+로컬에서 동작하던 게임을 여러 게임 서버로 배포하면서, 사용자가 어느 서버에 접속해야 하는지 결정할 필요가 생겼습니다. 방을 만든 뒤에는 참가자들이 같은 서버에 연결돼야 하고, 응답이 끊긴 서버는 새 방을 배정할 때 제외해야 했습니다.
+
+하나의 Spring Boot 코드베이스에서 실행 프로필과 조건부 컴포넌트 설정으로 API 서버와 게임 서버의 역할을 나눴습니다. 인증과 일반 REST 요청은 API 서버가 처리하고, 방에 연결된 사용자의 실시간 메시지와 게임 진행 상태는 게임 서버가 관리하도록 했습니다.
 
 ```mermaid
-flowchart TB
-    A["기존<br/>전체 파일 add"] --> B["변경 없는 파일도<br/>읽기와 압축"]
-    B --> C["월드가 커질수록<br/>커밋 비용 증가"]
-    D["개선<br/>status로<br/>변경 파일 확인"] --> E["변경/신규 add<br/>삭제 파일<br/>rm --cached"]
-    E --> F["커밋에 필요한<br/>파일만 처리"]
+flowchart LR
+    U["사용자"] -->|방 생성 요청| A["API 서버"]
+    A -->|서버 선택과 방 배정| R["Redis<br/>방 개수와 heartbeat<br/>방과 서버 연결"]
+    A -->|접속할 서버 정보| U
+    U -->|WebSocket| G["선택된 게임 서버"]
+    G -->|상태 갱신| R
 ```
 
-반복해서 비교할 수 있도록 실제 Paper와 봇으로 기록한 스냅샷 20개를 새 Git 저장소에 재생했습니다. 원인 분석에 쓰는 조정용 세션과 마지막 확인에 쓰는 검증용 세션은 따로 기록했습니다.
+Redis Sorted Set에는 서버별 방 개수를 기록했습니다. API 서버는 방 개수가 적은 순서로 후보를 확인하고, 서버 상태 키가 남아 있는 서버를 선택합니다. 새 방을 만들면 방과 서버의 연결 정보를 저장하고 해당 서버의 방 개수를 늘립니다. 이후 같은 방으로 들어오는 요청은 저장된 서버 정보를 사용하도록 했습니다.
 
-처음에는 압축 비용을 의심했습니다. 압축 수준을 낮춰도 커밋 시간은 계속 증가했고, 압축을 끄면 시간은 줄지만 `.git/objects` 크기가 340MB에서 472MB로 늘었습니다. 이어서 파일을 바꾸지 않고 커밋해 보니 이 경우에도 시간이 0.66초에서 8.5초로 증가했습니다. 실제 변경량보다 전체 파일을 stage하는 과정에 비용이 든다는 단서였습니다.
+게임 서버는 10초마다 heartbeat를 갱신하고, 서버 상태 키에 30초 TTL을 적용했습니다. 갱신이 끊겨 키가 만료된 서버는 새 방을 배정할 때 후보에서 제외합니다. Redis에는 서버 선택과 방 배정에 필요한 정보를 두고, 진행 중인 게임 상태는 해당 게임 서버가 관리하도록 구분했습니다.
 
-JGit의 `add "."`이 변경되지 않은 파일도 다시 읽고 압축하는 경로를 확인했습니다. `status`로 변경되거나 새로 생긴 파일을 찾고 해당 파일만 `add`하도록 바꿨습니다. 삭제한 파일은 `rm --cached`로 인덱스에 반영했습니다. 월드 저장 형식을 바꾸지 않고 처리 대상을 줄인 뒤 같은 조정용 세션을 재생했습니다.
+[서버 역할을 나눈 커밋](https://github.com/yuyeol3/yacht-backend/commit/eb6515c) / [서버 선택과 방 배정 코드](https://github.com/yuyeol3/yacht-backend/blob/865dd4056a69ab2da8875b1a9194779c79333096/src/main/java/io/github/yuyeol3/yachtbackend/server/GameServerRegistryService.java) / [heartbeat 갱신 코드](https://github.com/yuyeol3/yacht-backend/blob/865dd4056a69ab2da8875b1a9194779c79333096/src/main/java/io/github/yuyeol3/yachtbackend/server/GameServerHeartbeat.java)
 
-| 측정 | 개선 전 | 개선 후 |
-| --- | --- | --- |
-| 조정용 스냅샷 재생 | 1→20회차에서 0.87→9.7초 | 0.49~1.2초 |
-| 변경 없는 상태의 커밋 | 0.66→8.5초 | 29ms |
-| 조정에 쓰지 않은 검증용 재생 | 동일 재생 조건의 개선 전 수치는 기록 없음 | 0.37~0.91초, 회차에 따른 증가 추세 미관찰 |
+### 방 단위 상태 동기화와 클라우드 배포
 
-조정에 쓰지 않은 검증용 세션도 재생해 커밋 시간이 0.37~0.91초 범위에 머무는 것을 확인했습니다. 검증용 세션의 개선 전 기록은 실제 플레이 중 측정이라 재생 결과와 직접 비교한 단축률은 계산하지 않았습니다. 측정 대상은 로컬 커밋 시간으로, 게임 FPS나 네트워크 전송 성능은 이 실험에서 확인하지 않았습니다.
+게임 중 발생하는 주사위 굴리기, 고정과 해제, 점수 선택, 턴 전환은 서버에서 현재 턴과 게임 규칙을 확인한 뒤 처리했습니다. 처리한 상태는 STOMP로 같은 방의 참가자들에게 전달했습니다. 방당 최대 4명과 3분 턴 제한을 서버 규칙으로 적용했습니다.
 
-[압축 설정 비교와 스냅샷 재생 실험 기록](https://github.com/yuyeol3/mc-distributed/blob/main/experiments/E1-prime-results.md)
+Docker Compose로 API 서버와 게임 서버, Redis를 함께 실행해 연동을 확인한 뒤 게임 서버 2대를 AWS EC2에 배포했습니다. 본인은 백엔드와 게임 서버, Redis, EC2 배포를 담당했습니다. RDS 구성과 스키마 이식은 다른 팀원이 맡았고, S3 정적 호스팅과 인증서, DNS, ALB 구성도 해당 담당자가 진행했습니다. 저는 배포한 백엔드가 RDS와 ALB에 연동되도록 설정했습니다.
 
----
+이 프로젝트에서 확인한 범위는 서버 역할 분리와 상태 동기화, 클라우드 환경 구축과 배포입니다. 처리량 증가나 장기 운영 실적은 별도로 측정하지 않았습니다.
 
-## 추가 기술 경험
-
-Yacht Online은 3인 팀으로 개발한 실시간 게임입니다. 백엔드와 게임 서버 개발, Redis 연동, EC2 배포를 담당했습니다. 하나의 Spring Boot 코드베이스를 API 서버와 Game 서버 역할로 나누고, Redis Sorted Set의 방 개수와 heartbeat을 이용해 응답 가능한 서버를 선택했습니다. Game 서버는 10초마다 heartbeat을 갱신하고 30초 TTL로 갱신이 끊긴 서버를 후보에서 제외했습니다. Docker Compose 통합 실행 후 Game 서버 2대를 AWS에 배포했습니다.
-
-[서버 레지스트리 코드](https://github.com/yuyeol3/yacht-backend/blob/865dd4056a69ab2da8875b1a9194779c79333096/src/main/java/io/github/yuyeol3/yachtbackend/server/GameServerRegistryService.java) / [프로젝트 구성도](https://github.com/yuyeol3/yacht-online/blob/main/docs/images/diagram.png)
+[게임 액션 처리 코드](https://github.com/yuyeol3/yacht-backend/blob/865dd4056a69ab2da8875b1a9194779c79333096/src/main/java/io/github/yuyeol3/yachtbackend/game/GameController.java) / [프로젝트 구성도](https://github.com/yuyeol3/yacht-online/blob/main/docs/images/diagram.png) / [팀 역할과 배포 기록](https://github.com/yuyeol3/yacht-online#readme)
 
