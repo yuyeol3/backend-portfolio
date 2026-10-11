@@ -175,6 +175,3 @@ Yacht Online은 3인 팀으로 개발한 실시간 게임입니다. 백엔드와
 
 [서버 레지스트리 코드](https://github.com/yuyeol3/yacht-backend/blob/865dd4056a69ab2da8875b1a9194779c79333096/src/main/java/io/github/yuyeol3/yachtbackend/server/GameServerRegistryService.java) / [프로젝트 구성도](https://github.com/yuyeol3/yacht-online/blob/main/docs/images/diagram.png)
 
----
-
-*2026.10.11 기준으로 작성했습니다.*
