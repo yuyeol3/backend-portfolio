@@ -12,9 +12,9 @@ Java와 Spring으로 서비스 API와 데이터 수집기를 개발했습니다.
 | 카카오테크캠퍼스 | PR 검증과 ECR, SSM 배포 경로 구축, Docker 빌드 실패 대응 | 배포에서만 발견되던 오류를 PR 단계에서 재현하고, 수정 후 3개 구성요소 빌드 통과 |
 | Yacht Online | API와 게임 서버 역할 분리, Redis 기반 서버 선택, EC2 배포 | Docker Compose 통합 실행 후 게임 서버 2대를 AWS에 배포. 10초 heartbeat와 30초 TTL로 서버 상태 관리 |
 
-## 지원 직무와 연결되는 역량
+## 역량별 프로젝트 근거
 
-| 직무에서 요구하는 역량 | 프로젝트 근거 |
+| 역량 | 프로젝트 근거 |
 | --- | --- |
 | Java, Spring Boot, REST API, 인증과 보안 | Y-Fin의 OAuth2, JWT, Spring Security 인증, 사용자와 상품 API |
 | 관계형 DB와 데이터 처리 | PostgreSQL과 JPA를 이용한 토큰 상태 변경, Spring Batch 외부 API 수집과 정규화 |
